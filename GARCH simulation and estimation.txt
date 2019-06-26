@@ -1,0 +1,170 @@
+# preliminaries --------------------------------------------------------------
+
+library(Hmisc)
+library(optimx)
+library(rmgarch)
+library(tidyverse)
+library(plotly)
+library(rgl)  
+
+#ARCH(1) simulation------------------------------------------------------------------------------------
+n = 500 #time periods
+a0 = 1
+a1 = .6
+sigma_eps = 1
+epsolon = rnorm(n,0,sigma_eps)
+ret = double()
+sgima2 = double()
+len_aux1 = 1
+ret[1:len_aux1] = 1 #initial value
+
+epsolon_lev = epsolon[-(1:len_aux1)]
+epsolon_lag = epsolon[-n]
+sigma2_1 = sigma2[-(1:len_aux1)]
+
+sigma2_1 = a0 + a1*epsolon_lag^2
+plot(sigma2_1, type='l')
+ret = sigma2_1^.5*epsolon_lev
+plot(ret,type='l')
+#likelihood applied to ARCH(1)-----------------------------------------
+a0lik <- a0
+a1lik <- a1
+sigma_eps_lik <- sigma_eps
+Likelihood <- 0
+sum(-log((a0+a1*epsolon_lag^2)^.5)-.5*(ret^2)/(a0+a1*epsolon_lag^2))
+#maximum likelihood estimation of simulated ARCH(1) -------------------------------
+parameters <- c(a0, a1)
+like_func3 <- function(parameters){
+  a0 <- parameters[1]
+  a1 <- parameters[2]
+  -1*sum(-log((a0+a1*epsolon_lag^2)^.5)-.5*(ret^2)/(a0+a1*epsolon_lag^2))
+}
+
+like_func3(parameters)
+inic_parm <- c(10,10) #for thr optimx function this is the starting values
+optimx(inic_parm,like_func3,lower=-Inf, upper=Inf, method=c("Nelder-Mead","BFGS"))
+
+optim(inic_parm,like_func3,
+      method = c("Nelder-Mead"))
+optim(inic_parm,like_func3,
+      method = c("SANN"))
+optim(inic_parm,like_func3,
+      method = c("CG")) #
+optim(inic_parm,like_func3,
+      method = c("L-BFGS-B"))
+optim(inic_parm,like_func3,
+      method = c("BFGS"))
+
+#list of possible methods
+c("Nelder-Mead", "BFGS", "CG", "L-BFGS-B", "SANN","Brent")
+#
+#ARCH(2) simulation------------------------------------------------------------------------------------
+n = 500 #time periods
+a0 = 1
+a1 = .6
+a2 = .2
+sigma_eps = 1
+eps = rnorm(n,0,sigma_eps)
+ret = double()
+len_aux1 = 2
+
+epslev = eps[-(1:len_aux1)]
+epslag1 = eps[-c(1,n)]
+epslag2 = eps[-c(n,n-1)]
+
+sig2 = a0 + a1*epslag1^2 + a2*epslag2^2
+plot(sig2, type='l')
+ret = sig2^.5*epslev
+plot(ret,type='l')
+#likelihood applied to ARCH(2
+sum(-log((sig2)^.5)-.5*(ret^2)/(sig2))
+#
+#maximum likelihood estimation of simulated ARCH(2) -------------------------------
+parameters <- c(a0, a1, a2)
+likefunc <- function(parameters){
+  a0 <- parameters[1]
+  a1 <- parameters[2]
+  a2 <- parameters[3]
+  sig2 = a0 + a1*epslag1^2 + a2*epslag2^2
+  -1*sum(-log((sig2)^.5)-.5*(ret^2)/(sig2))
+}
+
+likefunc(parameters)
+
+inicparm <- c(10,10,10) #for thr optimx function this is the starting values
+optimx(inicparm,likefunc,lower=-Inf, upper=Inf, method=c("Nelder-Mead","BFGS"))
+optim(inicparm,like_func3,
+      method = c("Nelder-Mead"))
+optim(inicparm,like_func3,
+      method = c("SANN"))
+optim(inicparm,like_func3,
+      method = c("CG")) #
+optim(inicparm,like_func3,
+      method = c("L-BFGS-B"))
+optim(inicparm,like_func3,
+      method = c("BFGS"))
+#GARCH(1,1) simulation------------------------------------------------------------------------------------
+n = 500 #time periods
+a0 = 1
+a1 = .20
+b1 = .80
+sigma_eps = 1
+eps = rnorm(n,0,sigma_eps)
+ret = double()
+len_aux1 = 1
+
+sig2 <- c(1)
+for (t in 2:n) {
+  sig2[t] = a0 + a1*eps[t-1]^2 + b1*sig2[t-1]  
+}
+plot(sig2, type='l')
+ret = sig2^.5*eps
+plot(ret,type='l')
+#likelihood applied to ARCH(2
+sum(-log((sig2)^.5)-.5*(ret^2)/(sig2))
+#
+#maximum likelihood estimation of simulated GARCH(1,1) -------------------------------
+parameters <- c(a0, a1, b1)
+likefunc <- function(parameters){
+  a0 <- parameters[1]
+  a1 <- parameters[2]
+  b1 <- parameters[3]
+  sig2 <- c(1)
+  for (t in 2:n) {
+    eps[t-1] = ret[t-1]*sig2[t-1]
+    sig2[t] = a0 + a1*epslag1[t-1]^2 + b1*sig2[t-1]  
+  }
+  -1*sum(-log((sig2)^.5)-.5*(ret^2)/(sig2))
+}
+likefunc(parameters)
+
+inicparm <- c(0.1,0.1,0.1) #for thr optimx function this is the starting values
+likefunc(inicparm)
+optimx(inicparm,likefunc,lower=-Inf, upper=Inf, method=c("Nelder-Mead","BFGS"))
+optim(inicparm,likefunc,
+      method = c("Nelder-Mead"))
+optim(inicparm,likefunc,
+      method = c("SANN"))
+optim(inicparm,likefunc,
+      method = c("CG")) #
+optim(inicparm,likefunc,
+      method = c("L-BFGS-B"))
+optim(inicparm,likefunc,
+      method = c("BFGS"))
+
+#finis -----------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
